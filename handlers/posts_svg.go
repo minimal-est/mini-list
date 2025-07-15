@@ -13,7 +13,6 @@ func PostsSvgHandler(w http.ResponseWriter, r *http.Request) {
 	author := chi.URLParam(r, "archive")
 
 	apiURL := fmt.Sprintf("https://minimalest.kr/api/archive/%s/post/preview", author)
-
 	client := &http.Client{Timeout: 5 * time.Second}
 
 	resp, err := client.Get(apiURL)
@@ -25,33 +24,48 @@ func PostsSvgHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := &types.Response{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		http.Error(w, "JSON으로 직렬화하는 과정에서 실패했습니다.", http.StatusInternalServerError)
+		http.Error(w, "JSON 직렬화 실패", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
-
-	svg := `<svg xmlns="http://www.w3.org/2000/svg" width="650" height="150">`
-	svg += `<style>text { fill:white; font-family: sans-serif; font-size: 14px; stroke: black; stroke-width: 2; paint
--order
-: stroke;}</style>`
-	svg += fmt.Sprintf(`<text x="10" y="20">📌 Latest posts by %s</text>`, author)
+	maxLen := len("📌 Latest posts by " + author)
+	lines := []string{}
 	for i, post := range result.Data.Content {
 		if i >= 5 {
 			break
 		}
 		date := post.CreatedAt
-		if len(date) >= 10 {
+		if len(date) > 10 {
 			date = date[:10]
 		}
-
 		title := post.Title
-
-		y := 40 + i*20
-		svg += fmt.Sprintf(`<text x="10" y="%d">- [%s][%s] %s [%d]</text>`, y, date, post.FolderName, title, post.HitCount)
+		line := fmt.Sprintf("- [%s][%s] %s [%d]", date, post.FolderName, title, post.HitCount)
+		lines = append(lines, line)
+		if len(line) > maxLen {
+			maxLen = len(line)
+		}
 	}
-	svg += `</svg>`
 
+	svgWidth := maxLen*5 + 20
+	svgHeight := 40 + len(lines)*20
+
+	w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+
+	svg := fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`, svgWidth, svgHeight)
+	svg += `<style>text { font-family: sans-serif; font-size: 14px; }</style>`
+	svg += `<rect width="100%" height="100%" rx="10" fill="#f9f9f9"/>`
+
+	header := fmt.Sprintf("📌 Latest posts by %s", author)
+	svg += `<text x="10" y="20" stroke="white" stroke-width="3" fill="none">` + header + `</text>`
+	svg += `<text x="10" y="20" fill="#111">` + header + `</text>`
+
+	for i, line := range lines {
+		y := 40 + i*20
+		svg += fmt.Sprintf(`<text x="10" y="%d" stroke="white" stroke-width="2" fill="none">%s</text>`, y, line)
+		svg += fmt.Sprintf(`<text x="10" y="%d" fill="#333">%s</text>`, y, line)
+	}
+
+	svg += `</svg>`
 	w.Write([]byte(svg))
 }
