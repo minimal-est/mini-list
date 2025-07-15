@@ -1,4 +1,15 @@
-FROM ubuntu:latest
-LABEL authors="31n5ang"
+FROM golang:1.24-alpine
 
-ENTRYPOINT ["top", "-b"]
+WORKDIR /app
+
+COPY go.mod ./
+COPY go.sum ./
+RUN go mod download
+
+COPY . ./
+
+RUN go build -o main .
+
+EXPOSE 8001
+
+CMD ["./main"]
