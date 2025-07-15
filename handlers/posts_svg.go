@@ -33,7 +33,7 @@ func PostsSvgHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 
 	svg := `<svg xmlns="http://www.w3.org/2000/svg" width="650" height="150">`
-	svg += `<style>text { color:white; font-family: sans-serif; font-size: 14px; stroke: black; stroke-width: 2; paint
+	svg += `<style>text { fill:white; font-family: sans-serif; font-size: 14px; stroke: black; stroke-width: 2; paint
 -order
 : stroke;}</style>`
 	svg += fmt.Sprintf(`<text x="10" y="20">📌 Latest posts by %s</text>`, author)
